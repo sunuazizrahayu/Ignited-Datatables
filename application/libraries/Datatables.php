@@ -26,6 +26,8 @@
     private $select         = array();
     private $joins          = array();
     private $columns        = array();
+    private $columns_old    = array(); //custom
+    private $order_by       = array(); //custom
     private $where          = array();
     private $or_where       = array();
     private $where_in       = array();
@@ -65,6 +67,8 @@
     {
       foreach($this->explode(',', $columns) as $val)
       {
+        $this->columns_old[] = $val; //FIX GROUPBY
+
         $column = trim(preg_replace('/(.*)\s+as\s+(\w*)/i', '$2', $val));
         $column = preg_replace('/.*\.(.*)/i', '$1', $column); // get name after `.`
         $this->columns[] =  $column;
@@ -215,6 +219,17 @@
       $this->or_like[] = array($key_condition, $val, $side);
       $this->ci->db->or_like($key_condition, $val, $side);
       return $this;
+    }
+
+    /**
+    * Add: Generates the ORDER BY the query
+    */
+    public function order_by($columns='', $order='asc', $backtick_protect=TRUE)
+    {
+      if ($columns!='') {
+        $this->order_by[] = array($columns, $order, $backtick_protect);
+        return $this;
+      }
     }
 
     /**
@@ -449,6 +464,13 @@
         $this->ci->db->distinct($this->distinct);
         $this->ci->db->select($this->columns);
       }
+
+      /* FIX BUG GROUP BY START */
+      if(count($this->group_by) > 0)
+      {
+        $this->ci->db->select($this->columns_old);
+      }
+      /* FIX BUG GROUP BY END */
 
       $query = $this->ci->db->get($this->table, NULL, NULL, FALSE);
       return $query->num_rows();
